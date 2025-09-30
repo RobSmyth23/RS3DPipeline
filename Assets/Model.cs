@@ -88,10 +88,30 @@ public class Model
         
             //front faces
             faces = new List<Vector3Int>();
-        texture_index_list = new List<Vector3Int>();
-        normals = new List<Vector3>();
+            texture_index_list = new List<Vector3Int>();
+            normals = new List<Vector3>();
 
-            faces.Add(new Vector3Int(0, 1, 13));   texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1)); //Face 0
+            faces.Add(new Vector3Int(0, 1, 7));   texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1)); //Face 0
+            faces.Add(new Vector3Int(0, 7, 10)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1)); //Face 1
+        faces.Add(new Vector3Int(0, 10, 13)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(10, 7, 8)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(0, 13, 16)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(16, 13, 14)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(16, 14, 15)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(14, 12, 15)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(14, 11, 12)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(11, 9, 12)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(11, 8, 9)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(10, 8, 11)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(8, 7, 5)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(8, 5, 6)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(5, 3, 6)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(6, 3, 4)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+        faces.Add(new Vector3Int(7, 1, 2)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, 1));
+
+        //tried adding back faces, makes the object look weird, ask rob before proceeding further! Also re-explain what these normals mean and how to dictate where
+        //in the paint image the coords go!
+        faces.Add(new Vector3Int(17, 24, 18)); texture_index_list.Add(new Vector3Int(0, 1, 2)); normals.Add(new Vector3(0, 0, -1));
 
         /*
             faces.Add(new Vector3Int(13, 1, 10)); //Face 1
@@ -158,7 +178,7 @@ public class Model
             faces.Add(new Vector3Int(4, 21, 6));
             faces.Add(new Vector3Int(6, 21, 23));
         */
-        
+
     }
 
     public GameObject CreateUnityGameObject()
