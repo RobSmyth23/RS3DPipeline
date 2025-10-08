@@ -4,7 +4,7 @@ using System;
 
 public class Model
 {
-	List<Vector3> vertices;
+	public List<Vector3> vertices;
     List<Vector2> texture_coordinates;
     List<Vector3Int> texture_index_list;
     List<Vector3> normals;
