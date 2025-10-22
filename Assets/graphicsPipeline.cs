@@ -41,6 +41,28 @@ public class graphicsPipeline : MonoBehaviour
         List<Vector4> imageAfterScale = applyTransformation(imageAfterRotation, scaleMatrix);
 
         writeVectorsToFile(imageAfterScale, " After Scale and Rotation ", " ----------------- ");
+        
+        Matrix4x4 translationMatrix = Matrix4x4.TRS(new Vector3(1, 2, 5),
+            Quaternion.identity,
+            new Vector3(1, 1, 1));
+
+        writeMatrixToFile(translationMatrix, "translation Matrix ", " --------------- ");
+
+        List<Vector4> imageAftertranslation = applyTransformation(imageAfterScale, translationMatrix);
+
+        writeVectorsToFile(imageAftertranslation, " After translation ", " ----------------- ");
+        
+        Matrix4x4 MoT = translationMatrix * scaleMatrix * rotationMatrix;
+
+        writeMatrixToFile(MoT, "Matrix of transformations: ", " --------------- ");
+
+        List<Vector4> imageAfterMoT = applyTransformation(verts, MoT);
+
+        writeVectorsToFile(imageAfterMoT, " Image After MoT ", " ----------------- ");
+
+       //    --------------------------------------------------------
+            //#########################################################
+            
 
         Matrix4x4 viewingMatrix = Matrix4x4.LookAt(new Vector3(11, 7, 54), new Vector3(4, 9, 4), new Vector3(5, 4, 9));
 
