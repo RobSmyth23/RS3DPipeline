@@ -139,4 +139,62 @@ public class graphicsPipeline : MonoBehaviour
     {
         
     }
+
+    bool LineClip(ref Vector2 start, ref Vector2 end)
+    {
+        Outcode startCode = new Outcode(start);
+        Outcode endCode = new Outcode(end);
+        Outcode inViewPort = new Outcode();
+
+        //check for trivial accept
+        if ((startCode + endCode) == inViewPort)
+            return true;
+
+        //test for trivial rejection
+        if ((startCode * endCode) != inViewPort)
+            return false;
+
+    }
+    //UDLR - UP DOWN LEFT RIGHT
+    //1111 - 1   1    1    1
+    //0000 - 0   0    0    0
+    //therefore if udlr = 0100 it is 0d00 so its down from viewport
+    // if the udlr = 1001, it is 1 above and 1 to the right of the viewport : therefore not in the viewport
+   
+    Vector2 Intercept(Vector2 start, Vector2 end, int edgeIndex)
+    {
+        if (end.x != start.x)
+        {
+            float m = (end.y - start.y) / (end.x - start.x);
+
+            switch (edgeIndex)
+            {
+                case 0: //Top Edge y=1, x=?
+                    // x = x1 + (1/m) * (y - y1)
+                    break;
+
+                case 1: // Bottom Edge y=-1 x = ?
+                    break;
+
+                case 2: // Left Edge x=-1 y = ?
+                     // y = y1 + m(x - x1)
+                    float y = start.y + m * (-1 - start.x);
+                    return new Vector2(1, y);
+                    break;
+
+                case 3: // Right Edge x=1 y=?
+                default:
+                    // y = y1 + m(x - x1)
+                    float y = start.y + m *(1 - start.x);
+                    return new Vector2(1, y);
+                    break;
+            }
+        }
+        else
+        {
+
+        }
+       
+    }
+    
 }
