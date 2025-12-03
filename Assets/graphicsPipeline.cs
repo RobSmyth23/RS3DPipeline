@@ -311,7 +311,6 @@ public class graphicsPipeline : MonoBehaviour
             drawLine(v2, v3, texture, Color.blue);
             drawLine(v3, v1, texture, Color.blue);
         }
-
         myRenderer = screen.GetComponent<Renderer>();
         texture.Apply();
         myRenderer.material.mainTexture = texture;

@@ -9,7 +9,7 @@ public class Model
     List<Vector3Int> texture_index_list;
     List<Vector3> normals;
 
-    List<Vector3Int> faces;
+    public List<Vector3Int> faces;
 
 	public Model()
 	{
