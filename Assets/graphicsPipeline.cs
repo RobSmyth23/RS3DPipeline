@@ -10,7 +10,7 @@ public class graphicsPipeline : MonoBehaviour
     Texture2D texture;
     public Color lineColor = Color.black;
 
-    Pipeline_Initials myModel;
+    Model myModel;
 
     private StreamWriter writer;
     string filename = "Data.txt";
@@ -20,7 +20,7 @@ public class graphicsPipeline : MonoBehaviour
     {
         writer = new StreamWriter(filename, false);
 
-        myModel = new Pipeline_Initials();
+        myModel = new Model();
 
         List<Vector3> verts3 = myModel.vertices;
         List<Vector4> verts = convertToHomg(verts3);
