@@ -1,218 +1,184 @@
-using NUnit.Framework;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using UnityEditor.ShaderGraph.Internal;
 using UnityEngine;
 
 public class graphicsPipeline : MonoBehaviour
 {
-    StreamWriter writer;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    public GameObject screen;
+    Renderer myRenderer;
+    Texture2D texture;
+    public Color lineColor = Color.black;
+
+    Pipeline_Initials myModel;
+
+    private StreamWriter writer;
+    string filename = "Data.txt";
+    private float angle;
+
     void Start()
     {
-        writer = new StreamWriter("Data.txt", false);
+        writer = new StreamWriter(filename, false);
 
-        Model mymodel = new Model();
+        myModel = new Pipeline_Initials();
 
-        List<Vector3> verts3 = mymodel.vertices;
+        List<Vector3> verts3 = myModel.vertices;
         List<Vector4> verts = convertToHomg(verts3);
-        writeVectorsToFile(verts, "Vertices of my letter ", " ---------- ");
 
+        writeVectorsToFile(verts, "Vertices of model", " ---------- ");
 
         Vector3 axis = (new Vector3(9, 4, 4)).normalized;
-
-        Matrix4x4 rotationMatrix = Matrix4x4.TRS(Vector3.zero,
-            Quaternion.AngleAxis(26, axis),
-            Vector3.one);
+        Matrix4x4 rotationMatrix = Matrix4x4.TRS(Vector3.zero, Quaternion.AngleAxis(26, axis), Vector3.one);
 
         writeMatrixToFile(rotationMatrix, "Rotation Matrix", " ----------- ");
 
-        List<Vector4> imageAfterRotation = applyTransformation(verts, rotationMatrix);
+        List<Vector4> afterRot = applyTransformation(verts, rotationMatrix);
+        writeVectorsToFile(afterRot, "Verts after rotation", " --------------- ");
 
-        writeVectorsToFile(imageAfterRotation, "Verts after rotation ", " --------------- ");
+        Matrix4x4 scaleMatrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(9, 1, 4));
+        writeMatrixToFile(scaleMatrix, "Scale Matrix", " --------------- ");
 
-        Matrix4x4 scaleMatrix = Matrix4x4.TRS(Vector3.zero,
-            Quaternion.identity,
-            new Vector3(9, 1, 4));
+        List<Vector4> afterScale = applyTransformation(afterRot, scaleMatrix);
+        writeVectorsToFile(afterScale, "After Scale and Rotation", " ----------------- ");
 
-        writeMatrixToFile(scaleMatrix, "Scale Matrix ", " --------------- ");
+        Matrix4x4 translationMatrix = Matrix4x4.TRS(new Vector3(1, 2, 5), Quaternion.identity, Vector3.one);
+        writeMatrixToFile(translationMatrix, "Translation Matrix", " --------------- ");
 
-        List<Vector4> imageAfterScale = applyTransformation(imageAfterRotation, scaleMatrix);
+        List<Vector4> afterTranslation = applyTransformation(afterScale, translationMatrix);
+        writeVectorsToFile(afterTranslation, "After translation", " ----------------- ");
 
-        writeVectorsToFile(imageAfterScale, " After Scale and Rotation ", " ----------------- ");
+        Matrix4x4 mot = translationMatrix * scaleMatrix * rotationMatrix;
+        writeMatrixToFile(mot, "Matrix of transforms", " ----------------- ");
 
-        Matrix4x4 translationMatrix = Matrix4x4.TRS(new Vector3(1, 2, 5),
-            Quaternion.identity,
-            new Vector3(1, 1, 1));
+        List<Vector4> afterAll = applyTransformation(verts, mot);
+        writeVectorsToFile(afterAll, "Image After MoT", " ----------------- ");
 
-        writeMatrixToFile(translationMatrix, "translation Matrix ", " --------------- ");
+        Matrix4x4 view = Matrix4x4.LookAt(new Vector3(11, 7, 54), new Vector3(4, 9, 4), new Vector3(5, 4, 9));
+        writeMatrixToFile(view, "Viewing Matrix", " ---------- ");
 
-        List<Vector4> imageAftertranslation = applyTransformation(imageAfterScale, translationMatrix);
-
-        writeVectorsToFile(imageAftertranslation, " After translation ", " ----------------- ");
-
-        Matrix4x4 MoT = translationMatrix * scaleMatrix * rotationMatrix;
-
-        writeMatrixToFile(MoT, "Matrix of transformations: ", " --------------- ");
-
-        List<Vector4> imageAfterMoT = applyTransformation(verts, MoT);
-
-        writeVectorsToFile(imageAfterMoT, " Image After MoT ", " ----------------- ");
-
-        //    --------------------------------------------------------
-        //#########################################################
-
-
-        Matrix4x4 viewingMatrix = Matrix4x4.LookAt(new Vector3(11, 7, 54), new Vector3(4, 9, 4), new Vector3(5, 4, 9));
-
-        //translation
-
-        writeMatrixToFile(viewingMatrix, " Viewing Matrix ", " --------------- ");
-
-        Matrix4x4 projection = Matrix4x4.Perspective(90, 1, 1, 1000);
-
-        writeMatrixToFile(projection, " Projection ", " ------------ ");
+        Matrix4x4 proj = Matrix4x4.Perspective(90, 1, 1, 1000);
+        writeMatrixToFile(proj, "Projection Matrix", " ---------- ");
 
         writer.Close();
 
-
         var tests = new (Vector2 Start, Vector2 End, string Label)[]
         {
-            //(new Vector2(0, 0), new Vector2(0.5f, 0.5f), "Trivial Accept"),
-           // (new Vector2(2, 2), new Vector2(3, 3), "Trivial Reject"),
             (new Vector2(0, 0), new Vector2(2, 0), "Cross Right Edge"),
             (new Vector2(0, 0), new Vector2(-2, 0), "Cross Left Edge"),
             (new Vector2(0, 2), new Vector2(0, -2), "Cross Top & Bottom"),
-            (new Vector2(2, 2), new Vector2(-2, -2), "Diagonal Across Viewport"),
-            (new Vector2(0, 2), new Vector2(2, 2), "Horizontal Across Viewport"),
-            (new Vector2(2, 0), new Vector2(2, -2), "Vertical Across Viewport"),
+            (new Vector2(2, 2), new Vector2(-2, -2), "Diagonal"),
+            (new Vector2(0, 2), new Vector2(2, 2), "Horizontal"),
+            (new Vector2(2, 0), new Vector2(2, -2), "Vertical"),
             (new Vector2(-2, 2), new Vector2(2, -2), "Corner to Corner"),
-            (new Vector2(2, 4), new Vector2(4, -8), "Extended Example")
+            (new Vector2(2, 4), new Vector2(4, -8), "Extended")
         };
 
         for (int i = 0; i < tests.Length; i++)
         {
-            var (start, end, label) = tests[i];
+            var (s, e, label) = tests[i];
 
-            print($"--- Test Case {i}: {label} ---");
-            print($"Intercept (Top Edge): {Intercept(start, end, 0)}");
+            Debug.Log($"--- Test Case {i}: {label} ---");
+            Debug.Log($"Intercept (Top): {Intercept(s, e, 0)}");
 
-            if (LineClip(ref start, ref end))
-            {
-                print($"Clipped Line: Start={start}, End={end}");
-            }
+            if (LineClip(ref s, ref e))
+                Debug.Log($"Clipped Line: Start={s}, End={e}");
             else
-            {
-                print("Line Rejected");
-            }
+                Debug.Log("Line Rejected");
 
-            print("");
-
+            Debug.Log("");
         }
     }
 
     private void writeVectorsToFile(List<Vector4> verts, string before, string after)
     {
         writer.WriteLine(before);
-
         foreach (Vector4 v in verts)
-        {
-            writer.WriteLine(" ( " + v.x + " , " + v.y + " , " + v.z + " , " + v.w + " ) ");
-        }
+            writer.WriteLine($"({v.x},{v.y},{v.z},{v.w})");
         writer.WriteLine(after);
     }
 
-
-
-    private void writeMatrixToFile(Matrix4x4 matrix, string before, string after)
+    private void writeMatrixToFile(Matrix4x4 m, string before, string after)
     {
         writer.WriteLine(before);
-
         for (int i = 0; i < 4; i++)
         {
-            Vector4 v = matrix.GetRow(i);
-            writer.WriteLine(" ( " + v.x + " , " + v.y + " , " + v.z + " , " + v.w + " ) ");
+            Vector4 r = m.GetRow(i);
+            writer.WriteLine($"({r.x},{r.y},{r.z},{r.w})");
         }
         writer.WriteLine(after);
     }
 
-    private List<Vector4> convertToHomg(List<Vector3> vertices)
+    private List<Vector4> convertToHomg(List<Vector3> verts)
     {
         List<Vector4> output = new List<Vector4>();
-
-        foreach (Vector3 v in vertices)
-        {
-            output.Add(new Vector4(v.x, v.y, v.z, 1.0f));
-
-        }
+        foreach (Vector3 v in verts)
+            output.Add(new Vector4(v.x, v.y, v.z, 1));
         return output;
-
     }
 
-    private List<Vector4> applyTransformation
-        (List<Vector4> verts, Matrix4x4 tranformMatrix)
+    private List<Vector4> applyTransformation(List<Vector4> verts, Matrix4x4 m)
     {
         List<Vector4> output = new List<Vector4>();
         foreach (Vector4 v in verts)
-        { output.Add(tranformMatrix * v); }
-
+            output.Add(m * v);
         return output;
-
     }
 
-    private void displayMatrix(Matrix4x4 rotationMatrix)
+    private List<Vector2> projection(List<Vector4> pts)
     {
-        for (int i = 0; i < 4; i++)
-        { print(rotationMatrix.GetRow(i)); }
+        List<Vector2> output = new List<Vector2>();
+        foreach (var p in pts)
+            output.Add(new Vector2(p.x / p.z, p.y / p.z));
+        return output;
     }
 
-    // Update is called once per frame
-    void Update()
+    private Vector2Int convertToPixel(Vector2 p, int width, int height)
     {
-        
+        return new Vector2Int(
+            (int)((p.x + 1) * (width - 1) / 2),
+            (int)((p.y + 1) * (height - 1) / 2)
+        );
+    }
+
+    private List<Vector2Int> convertToPixels(List<Vector2> pts, int w, int h)
+    {
+        List<Vector2Int> result = new List<Vector2Int>();
+        foreach (var p in pts)
+            result.Add(convertToPixel(p, w, h));
+        return result;
     }
 
     bool LineClip(ref Vector2 start, ref Vector2 end)
     {
-        Outcode startCode = new Outcode(start);
-        Outcode endCode = new Outcode(end);
-        Outcode inViewPort = new Outcode();
+        Outcode sCode = new Outcode(start);
+        Outcode eCode = new Outcode(end);
+        Outcode inside = new Outcode();
 
-        //check for trivial accept
-        if ((startCode + endCode) == inViewPort)
+        if ((sCode + eCode) == inside)
             return true;
 
-        //test for trivial rejection
-        if ((startCode * endCode) != inViewPort)
+        if ((sCode * eCode) != inside)
             return false;
 
-        //we want the start of the line to begin where the viewport starts,
-        //so we change the start to the point where the viewport intercepts it.
-
-        if (startCode == inViewPort)
-        {
+        if (sCode == inside)
             return LineClip(ref end, ref start);
-        }
-        
-        if (startCode.up)
+
+        if (sCode.up)
         {
             start = Intercept(start, end, 0);
             return LineClip(ref start, ref end);
         }
-
-        if (startCode.down)
+        if (sCode.down)
         {
-            start = Intercept(start, end, -1);
+            start = Intercept(start, end, 1);
             return LineClip(ref start, ref end);
         }
-        if (startCode.left)
+        if (sCode.left)
         {
             start = Intercept(start, end, 2);
             return LineClip(ref start, ref end);
         }
-        if (startCode.right)
+        if (sCode.right)
         {
             start = Intercept(start, end, 3);
             return LineClip(ref start, ref end);
@@ -220,12 +186,7 @@ public class graphicsPipeline : MonoBehaviour
 
         return false;
     }
-    //UDLR - UP DOWN LEFT RIGHT
-    //1111 - 1   1    1    1
-    //0000 - 0   0    0    0
-    //therefore if udlr = 0100 it is 0d00 so its down from viewport
-    // if the udlr = 1001, it is 1 above and 1 to the right of the viewport : therefore not in the viewport
-   
+
     Vector2 Intercept(Vector2 start, Vector2 end, int edgeIndex)
     {
         if (end.x != start.x)
@@ -236,78 +197,138 @@ public class graphicsPipeline : MonoBehaviour
             {
                 case 0:
                     if (m != 0)
-                    {
-                        return new Vector2(start.x + (1 / m) * (1 - start.y), 1);
-                    }
-                    else
-                    {
-                        //this should never happen if called on outcode device
-                        if (start.y == 1)
-                            return start;
-                        else
-                            return new Vector2(float.NaN, float.NaN);
-                    }
-
-                    break;
+                        return new Vector2(start.x + (1f / m) * (1 - start.y), 1);
+                    return new Vector2(start.x, 1);
 
                 case 1:
                     if (m != 0)
-                    {
-                        return new Vector2(start.x + (1 / m) * (-1 - start.y), -1);
-                    }
-                    else
-                    {
-                        //this should never happen if called on outcode device
-                        if (start.y == -1)
-                            return start;
-                        else
-                            return new Vector2(float.NaN, float.NaN);
-                    }
+                        return new Vector2(start.x + (1f / m) * (-1 - start.y), -1);
+                    return new Vector2(start.x, -1);
 
-
-                case 2: // Left Edge x=-1 y = ?
-                    // y = y1 + m(x - x1)
-
-                    return new Vector2(1, start.y + m * (-1 - start.x));
+                case 2:
+                    return new Vector2(-1, start.y + m * (-1 - start.x));
 
                 default:
-                    // Right Edge x=1 y=?
-                    // y = y1 + m(x - x1)
                     return new Vector2(1, start.y + m * (1 - start.x));
             }
         }
         else
         {
-            // m = infinity i.e. a vertical line
-
             switch (edgeIndex)
             {
-                case 0:
-                    // Top Edge 
-                    return new Vector2(start.x, 1);
-
-                case 1:
-                    // Bottom Edge
-                    return new Vector2(start.x, -1);
-
-                case 2:
-                    // Left Edge  (This cannot occur if called on Outcode advice)
-                    if (start.x == -1)
-                        return start;
-
-                    return new Vector2(float.NaN, float.NaN);
-                
-                default:
-                    // Right Edge  (This cannot occur if called on Outcode advice)
-                    if (start.x == 1)
-                        return start;
-
-                    return new Vector2(float.NaN, float.NaN);
-
-
+                case 0: return new Vector2(start.x, 1);
+                case 1: return new Vector2(start.x, -1);
+                case 2: return new Vector2(-1, start.y);
+                default: return new Vector2(1, start.y);
             }
         }
-       
     }
-    
+
+    List<Vector2Int> bresenham(Vector2Int start, Vector2Int end)
+    {
+        int dx = end.x - start.x;
+
+        if (dx < 0)
+            return bresenham(end, start);
+
+        int dy = end.y - start.y;
+
+        if (dy < 0)
+            return NegY(bresenham(NegY(start), NegY(end)));
+
+        if (dy > dx)
+            return SwapXY(bresenham(SwapXY(start), SwapXY(end)));
+
+        int dyMinusDx = dy - dx;
+        int neg = 2 * dyMinusDx;
+        int pos = 2 * dy;
+        int p = 2 * dy - dx;
+
+        List<Vector2Int> points = new List<Vector2Int>();
+        int y = start.y;
+
+        points.Add(start);
+
+        for (int x = start.x + 1; x <= end.x; x++)
+        {
+            if (p < 0)
+            {
+                p += pos;
+            }
+            else
+            {
+                y++;
+                p += neg;
+            }
+            points.Add(new Vector2Int(x, y));
+        }
+
+        return points;
+    }
+
+    private Vector2Int SwapXY(Vector2Int v) => new Vector2Int(v.y, v.x);
+    private List<Vector2Int> SwapXY(List<Vector2Int> list)
+    {
+        List<Vector2Int> r = new List<Vector2Int>();
+        foreach (var v in list) r.Add(SwapXY(v));
+        return r;
+    }
+
+    private Vector2Int NegY(Vector2Int v) => new Vector2Int(v.x, -v.y);
+    private List<Vector2Int> NegY(List<Vector2Int> list)
+    {
+        List<Vector2Int> r = new List<Vector2Int>();
+        foreach (var v in list) r.Add(NegY(v));
+        return r;
+    }
+
+    void Update()
+    {
+        texture = new Texture2D(512, 512);
+        angle += 1;
+
+        List<Vector4> verts = convertToHomg(myModel.vertices);
+
+        Matrix4x4 rotation = Matrix4x4.TRS(Vector3.zero, Quaternion.AngleAxis(angle, Vector3.up), Vector3.one);
+        Matrix4x4 translation = Matrix4x4.TRS(new Vector3(0, 0, 5), Quaternion.identity, Vector3.one);
+
+        Matrix4x4 world = rotation * translation;
+        Matrix4x4 view = Matrix4x4.LookAt(new Vector3(0, 0, 10), Vector3.zero, Vector3.up);
+        Matrix4x4 proj = Matrix4x4.Perspective(90, 1, 1, 1000);
+
+        Matrix4x4 mvp = proj * view * world;
+
+        List<Vector4> ptsProj = applyTransformation(verts, mvp);
+        List<Vector2> viewportPts = projection(ptsProj);
+
+        foreach (Vector3Int face in myModel.faces)
+        {
+            Vector2 v1 = viewportPts[face.x];
+            Vector2 v2 = viewportPts[face.y];
+            Vector2 v3 = viewportPts[face.z];
+
+            drawLine(v1, v2, texture, Color.blue);
+            drawLine(v2, v3, texture, Color.blue);
+            drawLine(v3, v1, texture, Color.blue);
+        }
+
+        myRenderer = screen.GetComponent<Renderer>();
+        texture.Apply();
+        myRenderer.material.mainTexture = texture;
+    }
+
+    private void drawLine(Vector2 v1, Vector2 v2, Texture2D texture, Color col)
+    {
+        Vector2 s = v1;
+        Vector2 e = v2;
+
+        if (LineClip(ref s, ref e))
+        {
+            List<Vector2Int> pts = bresenham(convertToPixel(s, texture.width, texture.height),
+                                             convertToPixel(e, texture.width, texture.height));
+
+            foreach (var p in pts)
+                texture.SetPixel(p.x, p.y, col);
+        }
+    }
 }
