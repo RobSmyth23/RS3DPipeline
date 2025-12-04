@@ -8,6 +8,7 @@ public class graphicsPipeline : MonoBehaviour
     public GameObject screen;
     Renderer myRenderer;
     Texture2D texture;
+    public Texture2D texture_file;
     public Color lineColor = Color.black;
 
     Model myModel;
@@ -285,7 +286,7 @@ public class graphicsPipeline : MonoBehaviour
     void Update()
     {
         texture = new Texture2D(512, 512);
-        angle += 1;
+        angle += 8f;
 
         List<Vector4> verts = convertToHomg(myModel.vertices);
 
@@ -301,33 +302,156 @@ public class graphicsPipeline : MonoBehaviour
         List<Vector4> ptsProj = applyTransformation(verts, mvp);
         List<Vector2> viewportPts = projection(ptsProj);
 
-        foreach (Vector3Int face in myModel.faces)
+        for (int i = 0; i < myModel.faces.Count; i++)
         {
-            Vector2 v1 = viewportPts[face.x];
-            Vector2 v2 = viewportPts[face.y];
-            Vector2 v3 = viewportPts[face.z];
+            //draw the lines
+            Vector3Int face = myModel.faces[i];
+            Vector2 p1 = viewportPts[face.x];
+            Vector2 p2 = viewportPts[face.y];
+            Vector2 p3 = viewportPts[face.z];
 
-            drawLine(v1, v2, texture, Color.blue);
-            drawLine(v2, v3, texture, Color.blue);
-            drawLine(v3, v1, texture, Color.blue);
+            Vector2 a = p2 - p1;
+            Vector2 b = p3 - p2;
+
+            if (Vector3.Cross(a, b).z < 0)
+            {
+               // textureTriangle(i, verts, texture_file, texture);
+               Dictionary<int, RangeX> dict = new Dictionary<int, RangeX>();
+
+                drawLine(p1, p2, texture, Color.blue, ref dict);
+                drawLine(p2, p3, texture, Color.blue, ref dict);
+                drawLine(p3, p1, texture, Color.blue, ref dict);
+
+                foreach (var item in dict)
+                {
+                    for (int x = item.Value.start; x <= item.Value.end; x++)
+                    {
+                        texture.SetPixel(x, item.Key, Color.darkGreen);
+                    }
+ }
+
+
+
+
+
+
+            }
         }
         myRenderer = screen.GetComponent<Renderer>();
         texture.Apply();
         myRenderer.material.mainTexture = texture;
     }
 
-    private void drawLine(Vector2 v1, Vector2 v2, Texture2D texture, Color col)
+    private void drawLine(Vector2 v1, Vector2 v2, Texture2D texture, Color col, ref Dictionary<int, RangeX> dict)
     {
         Vector2 s = v1;
         Vector2 e = v2;
-
+        //to ensure the lines dont warp and go outside the screen, i.e. clip
         if (LineClip(ref s, ref e))
         {
             List<Vector2Int> pts = bresenham(convertToPixel(s, texture.width, texture.height),
                                              convertToPixel(e, texture.width, texture.height));
 
             foreach (var p in pts)
+            {
                 texture.SetPixel(p.x, p.y, col);
+                if (dict.ContainsKey(p.y))
+                {
+                    dict[p.y].AddPoint(p.x);
+                }
+                else
+                {
+                    dict[p.y] = new RangeX();
+                    dict[p.y].AddPoint(p.x);
+                }
+                //for(y in dict), add rang.x to it and point p.y
+            }
         }
     }
+    private void textureTriangle(int i, List<Vector4> verts, Texture2D textureFile, Texture2D target)
+    {
+        Vector3Int face = myModel.faces[i];
+        Vector3Int texIdx = myModel.texture_index_list[i];
+
+        // UVs
+        Vector2 a_t = myModel.texture_coordinates[texIdx.x];
+        Vector2 b_t = myModel.texture_coordinates[texIdx.y];
+        Vector2 c_t = myModel.texture_coordinates[texIdx.z];
+
+        // Vertices
+        Vector3 a = verts[face.x];
+        Vector3 b = verts[face.y];
+        Vector3 c = verts[face.z];
+
+        // Project to screen
+        Vector2 aProj = projection(new List<Vector4> { new Vector4(a.x, a.y, a.z, 1) })[0];
+        Vector2 bProj = projection(new List<Vector4> { new Vector4(b.x, b.y, b.z, 1) })[0];
+        Vector2 cProj = projection(new List<Vector4> { new Vector4(c.x, c.y, c.z, 1) })[0];
+
+        Vector2Int a2 = convertToPixel(aProj, texture.width, texture.height);
+        Vector2Int b2 = convertToPixel(bProj, texture.width, texture.height);
+        Vector2Int c2 = convertToPixel(cProj, texture.width, texture.height);
+
+        // Bounding box in Y
+        int minY = Mathf.FloorToInt(Mathf.Min(a2.y, Mathf.Min(b2.y, c2.y)));
+        int maxY = Mathf.CeilToInt(Mathf.Max(a2.y, Mathf.Max(b2.y, c2.y)));
+
+        // Loop scanlines
+        for (int y_p = minY; y_p <= maxY; y_p++)
+        {
+            RangeX range = new RangeX();
+
+            // Add intersections with edges
+            if ((a2.y <= y_p && b2.y >= y_p) || (b2.y <= y_p && a2.y >= y_p))
+            {
+                float t = (y_p - a2.y) / (b2.y - a2.y);
+                int x = Mathf.RoundToInt(a2.x + t * (b2.x - a2.x));
+                range.AddPoint(x);
+            }
+            if ((b2.y <= y_p && c2.y >= y_p) || (c2.y <= y_p && b2.y >= y_p))
+            {
+                float t = (y_p - b2.y) / (c2.y - b2.y);
+                int x = Mathf.RoundToInt(b2.x + t * (c2.x - b2.x));
+                range.AddPoint(x);
+            }
+            if ((c2.y <= y_p && a2.y >= y_p) || (a2.y <= y_p && c2.y >= y_p))
+            {
+                float t = (y_p - c2.y) / (a2.y - c2.y);
+                int x = Mathf.RoundToInt(c2.x + t * (a2.x - c2.x));
+                range.AddPoint(x);
+            }
+
+            if (range.start != -1 && range.end != -1)
+            {
+                for (int x_p = range.start; x_p <= range.end; x_p++)
+                {
+                    // Your barycentric snippet
+                    Vector2 A = b2 - a2;
+                    Vector2 B = c2 - a2;
+                    Vector2 A_t = b_t - a_t;
+                    Vector2 B_t = c_t - a_t;
+
+                    float x = x_p - a2.x;
+                    float y = y_p - a2.y;
+
+                    float denom = (A.x * B.y - A.y * B.x);
+                    if (Mathf.Abs(denom) < 1e-6f) continue;
+
+                    float r = (x * B.y - y * B.x) / denom;
+                    float s = (A.x * y - x * A.y) / denom;
+
+                    if (r >= 0 && s >= 0 && r + s <= 1)
+                    {
+                        Vector2 texture_point = a_t + r * A_t + s * B_t;
+                        texture_point.x *= textureFile.width;
+                        texture_point.y *= textureFile.height;
+
+                        Color color = textureFile.GetPixel((int)texture_point.x, (int)texture_point.y);
+                        target.SetPixel(x_p, y_p, color);
+                    }
+                }
+            }
+        }
+    }
+
 }
